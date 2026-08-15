@@ -6,6 +6,8 @@ namespace Seomunk\Seomunk;
 
 use Illuminate\Support\ServiceProvider;
 use Seomunk\Seomunk\Console\Commands\SeomunkCommand;
+use Seomunk\Seomunk\Providers\GeoServiceProvider;
+use Seomunk\Seomunk\Providers\MetaServiceProvider;
 
 class SeomunkServiceProvider extends ServiceProvider
 {
@@ -17,6 +19,13 @@ class SeomunkServiceProvider extends ServiceProvider
         $this->mergeConfigFrom(__DIR__.'/../config/seomunk.php', 'seomunk');
 
         $this->app->singleton(Seomunk::class);
+
+        /**
+         * Register Modules
+         */
+        $this->app->register(GeoServiceProvider::class);
+        $this->app->register(MetaServiceProvider::class);
+        
     }
 
     /**
