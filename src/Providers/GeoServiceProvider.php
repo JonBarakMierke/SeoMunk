@@ -2,10 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Seomunk\Seomunk\Providers;
+namespace SeoMunk\SeoMunk\Providers;
 
 use Illuminate\Support\ServiceProvider;
-use Seomunk\Seomunk\Console\Commands\SeomunkCommand;
+use SeoMunk\SeoMunk\Console\Commands\SeomunkCommand;
+use SeoMunk\SeoMunk\Modules\JSON\Schema\BuildAutomaticSchema;
+use SeoMunk\SeoMunk\Modules\JSON\Schema\SchemaBuilder;
+use SeoMunk\SeoMunk\Modules\JSON\Schema\SchemaManager;
 
 class GeoServiceProvider extends ServiceProvider
 {
@@ -14,11 +17,16 @@ class GeoServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // $this->app->singleton(SchemaBuilder::class);
-        // $this->app->singleton(GeoScorer::class);
-        // $this->app->singleton(CitationEngine::class);
-        // $this->app->singleton(LlmsTxtGenerator::class);
-        // $this->app->singleton(ProductFeedGenerator::class);
+        $this->app->singleton(SchemaManager::class);
+
+        $this->app->singleton(
+            SchemaBuilder::class,
+            fn ($app) => new SchemaBuilder(
+                $app->make(SchemaManager::class)
+            )
+        );
+
+        $this->app->singleton(BuildAutomaticSchema::class);
     }
 
     /**

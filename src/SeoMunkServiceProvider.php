@@ -2,14 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Seomunk\Seomunk;
+namespace SeoMunk\SeoMunk;
 
 use Illuminate\Support\ServiceProvider;
-use Seomunk\Seomunk\Console\Commands\SeomunkCommand;
-use Seomunk\Seomunk\Providers\GeoServiceProvider;
-use Seomunk\Seomunk\Providers\MetaServiceProvider;
+use SeoMunk\SeoMunk\Console\Commands\SeomunkCommand;
+use SeoMunk\SeoMunk\Providers\GeoServiceProvider;
+use SeoMunk\SeoMunk\Providers\MetaServiceProvider;
+use SeoMunk\SeoMunk\View\Components\JsonHead;
 
-class SeomunkServiceProvider extends ServiceProvider
+class SeoMunkServiceProvider extends ServiceProvider
 {
     /**
      * Register any application services.
@@ -18,7 +19,7 @@ class SeomunkServiceProvider extends ServiceProvider
     {
         $this->mergeConfigFrom(__DIR__.'/../config/seomunk.php', 'seomunk');
 
-        $this->app->singleton(Seomunk::class);
+        $this->app->singleton(SeoMunk::class);
 
         /**
          * Register Modules
@@ -33,6 +34,8 @@ class SeomunkServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        $this->app['blade.compiler']->component('json-head', JsonHead::class);
+
         $this->loadRoutesFrom(__DIR__.'/../routes/seomunk.php');
 
         $this->loadViewsFrom(__DIR__.'/../resources/views', 'seomunk');
@@ -64,7 +67,7 @@ class SeomunkServiceProvider extends ServiceProvider
         ], ['seomunk', 'seomunk-migrations']);
 
         $this->commands([
-            SeomunkCommand::class,
+            SeoMunkCommand::class,
         ]);
     }
 }

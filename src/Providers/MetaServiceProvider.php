@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Seomunk\Seomunk\Providers;
+namespace SeoMunk\SeoMunk\Providers;
 
 use Illuminate\Support\ServiceProvider;
-use Seomunk\Seomunk\Console\Commands\SeomunkCommand;
+use SeoMunk\SeoMunk\Console\Commands\SeomunkCommand;
 
 class MetaServiceProvider extends ServiceProvider
 {

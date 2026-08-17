@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Seomunk\Seomunk\Console\Commands;
+namespace SeoMunk\SeoMunk\Console\Commands;
 
 use Illuminate\Console\Command;
 

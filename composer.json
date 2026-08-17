@@ -33,12 +33,12 @@
     },
     "autoload": {
         "psr-4": {
-            "Seomunk\\Seomunk\\": "src/"
+            "SeoMunk\\SeoMunk\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "Seomunk\\Seomunk\\Tests\\": "tests/",
+            "SeoMunk\\SeoMunk\\Tests\\": "tests/",
             "Workbench\\App\\": "workbench/app/",
             "Workbench\\Database\\Factories\\": "workbench/database/factories/",
             "Workbench\\Database\\Seeders\\": "workbench/database/seeders/"
@@ -88,10 +88,10 @@
     "extra": {
         "laravel": {
             "providers": [
-                "Seomunk\\Seomunk\\SeomunkServiceProvider"
+                "SeoMunk\\SeoMunk\\SeoMunkServiceProvider"
             ],
             "aliases": {
-                "Seomunk": "Seomunk\\Seomunk\\Facades\\Seomunk"
+                "Seomunk": "SeoMunk\\SeoMunk\\Facades\\SeoMunk"
             }
         }
     },
