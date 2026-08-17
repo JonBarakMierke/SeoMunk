@@ -2,16 +2,22 @@
 
 SeoMunk is an open-source Laravel package for SEO and AI Search Optimization (AIO/GEO).
 
-The package is designed to provide a flexible, Laravel-native way to manage:
+SeoMunk provides a flexible, Laravel-native API for managing:
 
-* Meta tags and SEO data
+* SEO meta tags
+* Open Graph metadata
+* Twitter/X metadata
+* Canonical URLs
+* Robots directives
 * JSON-LD structured data
-* Automatic schema generation from models
-* Manually defined schemas
-* FAQ, Product, Organization, Breadcrumb, Review, and other Schema.org types
+* Automatic metadata and schema generation from Eloquent models
+* Manually defined metadata and schemas
+* FAQ, Product, Review, Breadcrumb, Organization, and other Schema.org types
 * Raw JSON-LD schemas
 
 > **Current status:** Early development. The API is actively evolving and should not yet be considered stable.
+
+---
 
 ## Installation
 
@@ -27,21 +33,185 @@ Publish the configuration:
 php artisan vendor:publish --tag=seomunk-config
 ```
 
-## JSON-LD Schema
+---
 
-SeoMunk provides a fluent API for adding JSON-LD structured data to a page.
+# Usage
 
-Include the JSON-LD head component in your layout:
+SeoMunk is organized into independent modules.
+
+Currently, the package provides:
+
+* **Meta** — HTML metadata and social sharing metadata
+* **JSON** — JSON-LD structured data and Schema.org support
+
+Both modules are accessed through the main `SeoMunk` facade.
+
+```php
+use SeoMunk\SeoMunk\Facades\SeoMunk;
+```
+
+---
+
+# Meta
+
+The Meta module is responsible for generating the metadata placed inside the `<head>` of a page.
+
+Include the Meta component in your application's layout:
+
+```blade
+<x-meta-head />
+```
+
+The component renders the metadata currently registered with SeoMunk.
+
+## Defining Metadata
+
+Metadata can be explicitly defined using the `SeoMunk` facade:
+
+```php
+use SeoMunk\SeoMunk\Facades\SeoMunk;
+
+SeoMunk::meta()
+    ->title('About Us')
+    ->description('Learn more about our company.')
+    ->canonical(url('/about'));
+```
+
+Metadata methods are chainable.
+
+For example:
+
+```php
+SeoMunk::meta()
+    ->title('My Product')
+    ->description('A description of my product.')
+    ->image(asset('images/product.jpg'))
+    ->canonical(url('/products/my-product'))
+    ->ogType('product')
+    ->twitterCard('summary_large_image');
+```
+
+## Supported Metadata
+
+The Meta module currently supports:
+
+* `title`
+* `description`
+* `canonical`
+* `robots`
+* `image`
+* `author`
+* `ogType`
+* `twitterCard`
+* `siteName`
+* `url`
+
+Example:
+
+```php
+SeoMunk::meta()
+    ->title('My Page')
+    ->description('My page description.')
+    ->robots('index, follow')
+    ->author('Jon Mierke')
+    ->image(asset('images/og-image.jpg'))
+    ->ogType('website')
+    ->twitterCard('summary_large_image');
+```
+
+## Automatic Metadata From Models
+
+SeoMunk can automatically generate metadata from Eloquent models.
+
+Models can implement `seoMetaDefaults()`:
+
+```php
+public function seoMetaDefaults(): array
+{
+    return [
+        'title' => $this->name,
+        'description' => $this->description,
+        'image' => $this->image,
+        'url' => route('products.show', $this),
+    ];
+}
+```
+
+SeoMunk can then use the model as a source of default metadata.
+
+Models may optionally use the `HasSeoMeta` concern to provide editable SEO metadata.
+
+```php
+use SeoMunk\SeoMunk\Modules\Meta\Concerns\HasSeoMeta;
+
+class Product extends Model
+{
+    use HasSeoMeta;
+}
+```
+
+This allows stored SEO metadata to override model-derived defaults.
+
+## Metadata Precedence
+
+SeoMunk is designed around a layered metadata system.
+
+In general, values are resolved from lower-priority defaults toward higher-priority overrides:
+
+```text
+Configuration defaults
+        ↓
+Model-derived defaults
+        ↓
+Stored model SEO metadata
+        ↓
+Explicit SeoMunk::meta() values
+```
+
+The most specific value wins.
+
+This allows an application to have automatic SEO metadata while still providing complete control over individual pages.
+
+## Meta Component
+
+Add the component to your application's main layout:
+
+```blade
+<head>
+    <x-meta-head />
+
+    {{-- Other head elements --}}
+</head>
+```
+
+The component is intentionally responsible only for rendering the resolved metadata.
+
+It does not need to know whether the metadata came from:
+
+* configuration
+* a model
+* a database record
+* a controller
+* a route
+* explicit `SeoMunk::meta()` calls
+
+---
+
+# JSON-LD Schema
+
+The JSON module provides a fluent API for generating JSON-LD structured data.
+
+Include the JSON-LD component in your layout:
 
 ```blade
 <x-json-head />
 ```
 
-The component renders all schemas that have been registered for the current request.
+The component renders all schemas registered during the current request.
 
-### Adding a Schema
+## Adding a Schema
 
-Schemas can be added using the `SeoMunk` facade:
+A generic Schema.org object can be registered using `schema()`:
 
 ```php
 use SeoMunk\SeoMunk\Facades\SeoMunk;
@@ -53,13 +223,13 @@ SeoMunk::schema()->schema([
 ]);
 ```
 
-The schema will be available to `<x-json-head />` when the page is rendered.
+This allows any valid Schema.org structure to be added without SeoMunk needing a dedicated schema type.
 
-## Schema Types
+## Convenience Schema Types
 
-SeoMunk provides convenience methods for common Schema.org types.
+SeoMunk also provides convenience methods for common schema types.
 
-For example, an FAQ schema can be added with:
+For example:
 
 ```php
 SeoMunk::schema()->withFAQ([
@@ -74,16 +244,17 @@ SeoMunk::schema()->withFAQ([
 ]);
 ```
 
-Multiple schemas can be chained together:
+Multiple schema types can be combined:
 
 ```php
 SeoMunk::schema()
-    ->withFAQ($faqs)
     ->withProduct($product)
+    ->withFAQ($faqs)
+    ->withReviews($reviews)
     ->withBreadcrumb($breadcrumbs);
 ```
 
-The resulting schemas are all rendered by:
+All registered schemas are rendered by:
 
 ```blade
 <x-json-head />
@@ -91,7 +262,7 @@ The resulting schemas are all rendered by:
 
 ## Raw JSON-LD
 
-If you already have JSON-LD and don't want to use one of SeoMunk's schema builders, raw JSON can be added:
+SeoMunk provides `withRawJson()` for JSON-LD that doesn't have a dedicated convenience method.
 
 ```php
 SeoMunk::schema()->withRawJson($json);
@@ -109,43 +280,17 @@ SeoMunk::schema()->withRawJson('
 ');
 ```
 
-Raw JSON is converted into SeoMunk's internal schema representation before rendering.
+Raw JSON is decoded and normalized into SeoMunk's internal schema representation before rendering.
 
-## Using Schemas in Controllers
+This provides an escape hatch for custom or uncommon Schema.org types.
 
-Schemas don't need to come from a model.
+---
 
-They can be registered directly from a controller:
+# Automatic Schema Generation
 
-```php
-use SeoMunk\SeoMunk\Facades\SeoMunk;
+JSON-LD schemas can also be generated automatically from Eloquent models.
 
-public function show()
-{
-    SeoMunk::schema()
-        ->schema([
-            '@context' => 'https://schema.org',
-            '@type' => 'WebPage',
-            'name' => 'About Us',
-        ]);
-
-    return view('about');
-}
-```
-
-Your Blade layout only needs:
-
-```blade
-<x-json-head />
-```
-
-This separation allows controllers, services, models, and other parts of the application to contribute schemas without the head component needing to know where they came from.
-
-## Automatic Schema Generation
-
-SeoMunk is also designed to support automatic schema generation from models.
-
-Models can expose a `geoProfile()` method containing the information needed to generate their schemas.
+Models can expose a `geoProfile()` method containing information that SeoMunk can use to determine which schemas should be generated.
 
 For example:
 
@@ -163,37 +308,188 @@ public function geoProfile(): array
                 'answer' => '...',
             ],
         ],
+
+        'reviews' => [
+            // Review data
+        ],
+
+        'breadcrumb' => [
+            // Breadcrumb data
+        ],
     ];
 }
 ```
 
-SeoMunk can then use its automatic schema builder to inspect the model and register the appropriate schemas.
+Automatic schema generation is handled separately from rendering.
 
-Automatic schema generation is intended to be an optional convenience rather than a requirement. Applications can use manually registered schemas without implementing `geoProfile()`.
+SeoMunk's automatic schema builder reads the model and registers the appropriate schemas with the schema manager.
 
-## Rendering
+This means models are **one possible source of schemas**, rather than being a requirement for using the JSON-LD system.
 
-SeoMunk's JSON-LD schemas are rendered as standard JSON-LD script tags:
+---
 
-```html
-<script type="application/ld+json">
-{
-    "@context": "https://schema.org",
-    "@type": "WebPage",
-    "name": "About Us"
-}
-</script>
+# Manual vs Automatic Usage
+
+SeoMunk supports both automatic and explicit usage.
+
+### Automatic
+
+A model can provide SEO and schema information:
+
+```php
+$product->seoMetaDefaults();
+
+$product->geoProfile();
 ```
 
-The application only needs to include the component:
+SeoMunk can use these methods to build metadata and structured data automatically.
+
+### Explicit
+
+Applications can define everything manually:
+
+```php
+SeoMunk::meta()
+    ->title('About Us')
+    ->description('Learn about our company.');
+
+SeoMunk::schema()
+    ->schema([
+        '@context' => 'https://schema.org',
+        '@type' => 'AboutPage',
+        'name' => 'About Us',
+    ]);
+```
+
+### Combining both
+
+Automatic values can be used as defaults while explicit values override them:
+
+```php
+SeoMunk::meta()
+    ->from($product)
+    ->title('Custom Product Title');
+
+SeoMunk::schema()
+    ->withProduct($product)
+    ->withFAQ($faqs);
+```
+
+This is one of the core design principles of SeoMunk: **automation should be convenient, not restrictive.**
+
+---
+
+# Blade Components
+
+SeoMunk currently provides two primary head components.
+
+### Meta
+
+```blade
+<x-meta-head />
+```
+
+Responsible for rendering:
+
+* `<title>`
+* `<meta name="description">`
+* `<meta name="robots">`
+* canonical URLs
+* Open Graph tags
+* Twitter/X card tags
+* other metadata managed by the Meta module
+
+### JSON-LD
 
 ```blade
 <x-json-head />
 ```
 
-SeoMunk handles collecting and rendering the schemas registered during the request.
+Responsible for rendering:
 
-## Configuration
+```html
+<script type="application/ld+json">
+    ...
+</script>
+```
+
+blocks generated by the JSON-LD module.
+
+A typical layout may therefore contain:
+
+```blade
+<head>
+    <x-meta-head />
+    <x-json-head />
+</head>
+```
+
+---
+
+# Architecture
+
+SeoMunk is designed around independent modules with a common philosophy:
+
+> **Build data first. Render it separately.**
+
+The current architecture is roughly:
+
+```text
+SeoMunk
+│
+├── Meta
+│   ├── MetaManager
+│   ├── MetaData
+│   ├── BuildAutomaticMeta
+│   └── HasSeoMeta
+│
+└── JSON
+    └── Schema
+        ├── SchemaManager
+        ├── SchemaBuilder
+        ├── BuildAutomaticSchema
+        └── SchemaTypes
+            ├── Product
+            ├── FAQ
+            ├── Review
+            ├── Breadcrumb
+            └── Organization
+```
+
+The main facade provides access to the modules:
+
+```php
+SeoMunk::meta();
+
+SeoMunk::schema();
+```
+
+This keeps the public API simple while allowing each module to remain independently organized.
+
+---
+
+# Design Philosophy
+
+SeoMunk is intentionally designed to avoid requiring a specific application architecture.
+
+SEO data can come from:
+
+* Eloquent models
+* database records
+* controllers
+* routes
+* configuration
+* application services
+* manually defined arrays
+* raw JSON-LD
+
+The package should not require applications to structure their models in a specific way just to use SeoMunk.
+
+Automatic functionality is provided as a convenience, while manual APIs remain available when developers need complete control.
+
+---
+
+# Configuration
 
 SeoMunk's configuration is stored in:
 
@@ -201,75 +497,52 @@ SeoMunk's configuration is stored in:
 config/seomunk.php
 ```
 
-Schema-specific settings are located under:
+Publish it with:
+
+```bash
+php artisan vendor:publish --tag=seomunk-config
+```
+
+Configuration is organized by module.
+
+For example:
+
+```php
+config('seomunk.meta');
+```
+
+and:
 
 ```php
 config('seomunk.schema');
 ```
 
-For example:
+Module-specific configuration will continue to evolve as SeoMunk develops.
 
-```php
-config('seomunk.schema.include_organization');
-```
+---
 
-Configuration will continue to evolve as SeoMunk's schema and SEO functionality expands.
+# Development Status
 
-## Architecture
+SeoMunk is currently in **early development**.
 
-SeoMunk is being designed around independent modules rather than a single product-focused schema system.
+The package architecture is being actively developed and the public API may change before the first stable release.
 
-The current JSON-LD architecture is roughly:
+Current focus areas include:
 
-```text
-SeoMunk
-│
-├── SchemaManager
-│   └── Maintains schemas for the current request
-│
-├── SchemaBuilder
-│   └── Provides fluent methods for adding schemas
-│
-├── BuildAutomaticSchema
-│   └── Builds schemas from supported models
-│
-└── SchemaTypes
-    ├── Product
-    ├── FAQ
-    ├── Review
-    ├── Breadcrumb
-    ├── Organization
-    └── ...
-```
-
-The goal is for all schema sources to eventually converge into the same schema manager.
-
-This allows SeoMunk to support:
-
-```text
-Model
-Controller
-Route
-Service
-Manual schema
-Automatic schema
-Raw JSON-LD
-       │
-       ▼
-SchemaManager
-       │
-       ▼
-<x-json-head />
-```
-
-## Project Status
-
-SeoMunk is currently under active development.
-
-The API, configuration structure, schema types, and module architecture may change before the first stable release.
+* Meta management
+* JSON-LD schema generation
+* Automatic model-based SEO
+* Automatic model-based structured data
+* Additional Schema.org types
+* Route-level SEO configuration
+* More flexible page detection
+* AIO/GEO functionality
+* SEO analysis and scoring
 
 Contributions, ideas, bug reports, and architectural feedback are welcome.
 
-## License
+---
 
-SeoMunk is open-sourced software licensed under the [MIT license](LICENSE).
+# License
+
+SeoMunk is open-source software licensed under the [MIT License](LICENSE).
